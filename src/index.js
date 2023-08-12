@@ -3,7 +3,7 @@ import { startMonitor, returnLogs } from './lib'
 import express from 'express'
 import helmet from 'helmet'
 
-const { APP_PORT, RECHECK_TIMEOUT } = process.env
+const { APP_PORT } = process.env
 
 export const readySetGo = async () => {
   await startMonitor()
@@ -16,11 +16,11 @@ export const readySetGo = async () => {
   app.get('/favicon.ico', (req, res) => res.sendStatus(204))
 
   app.use('/', (req, res) => {
-    const refreshSeconds = RECHECK_TIMEOUT / 1000
-
-    const header = `<head><meta http-equiv="refresh" content="${refreshSeconds}"></head>`
-    const body = `Refresh seconds ${refreshSeconds}<br>${returnLogs()}`
-    res.send(header + body)
+    // const refreshSeconds = RECHECK_TIMEOUT / 1000
+    // const header = `<head><meta http-equiv="refresh" content="${refreshSeconds}"></head>`
+    // const body = `Refresh seconds ${refreshSeconds}<br>${returnLogs()}`
+    // res.send(header + body)
+    res.send(returnLogs())
   })
 
   app.get('*', (req, res, next) => {
