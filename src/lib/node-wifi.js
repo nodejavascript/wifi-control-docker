@@ -1,8 +1,13 @@
 import wifi from 'node-wifi'
+import beep from 'beepbeep'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
 
 import { clearStdout } from './'
 
 const { RECHECK_TIMEOUT, WIFI_INTERFACE, AP_SSID, AP_PASSWORD } = process.env
+
+dayjs.extend(relativeTime)
 
 wifi.init({
   iface: WIFI_INTERFACE
@@ -10,16 +15,37 @@ wifi.init({
 
 const debug = false
 
-export const logs = []
+const logs = []
+const logChanges = []
 
-export const returnLogs = (delimter = '<br>') => {
+const addToLogChanges = attempt => {
+  logChanges.push(attempt)
+  stdLogs()
+}
+
+const addToLogs = async () => {
+  const attempt = await returnAttempt()
+
+  const lastLog = logs[logs.length - 1]
+
+  logs.push(attempt)
+
+  if (!lastLog) addToLogChanges(attempt)
+
+  if (lastLog) {
+    const areEqual = Boolean(lastLog.status.toString() === attempt.status.toString())
+    if (!areEqual) addToLogChanges(attempt)
+  }
+}
+
+export const returnLogs = (isStdout = false) => {
   let html = ''
 
-  logs.forEach(log => {
+  logChanges.forEach(log => {
     const { timestamp, status } = log
     const statuses = status.join(' ')
-    html += `${timestamp}, ${statuses}`
-    html += delimter
+    html += `${isStdout ? timestamp : dayjs(timestamp).fromNow()}, ${statuses}`
+    html += isStdout ? '\n' : '<br/>'
   })
 
   return html
@@ -29,19 +55,14 @@ const stdLogs = () => {
   clearStdout(process)
 
   const refreshSeconds = RECHECK_TIMEOUT / 1000
-  const body = `Refresh seconds ${refreshSeconds}\n${returnLogs('\n')}`
+  const body = `Refresh seconds ${refreshSeconds}\n${returnLogs(true)}`
 
   console.log(body)
 }
 
 export const startMonitor = async () => {
-  logs.push(await returnAttempt())
-  stdLogs()
-
-  setInterval(async () => {
-    logs.push(await returnAttempt())
-    stdLogs()
-  }, RECHECK_TIMEOUT)
+  addToLogs()
+  setInterval(addToLogs, RECHECK_TIMEOUT)
 }
 
 const returnAttempt = async () => {
@@ -85,6 +106,8 @@ const returnAttempt = async () => {
     const message = err.message.split('Error:').pop().trim()
 
     attempt.status.push(message)
+
+    beep(1)
 
     return attempt
   }

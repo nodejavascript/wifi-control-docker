@@ -1,2 +1,2 @@
-export * from './readline'
-export * from './node-wifi'
+export { clearStdout } from './readline'
+export { startMonitor, returnLogs } from './node-wifi'
